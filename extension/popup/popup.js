@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Check if name is saved
   chrome.storage.local.get(["user_name", "protection_enabled"], (result) => {
+    console.log("[CopyGuard Popup] stored name:", result.user_name, "protection:", result.protection_enabled);
     if (!result.user_name) {
       // First time — show name input, no way to skip
       nameSection.style.display = "block";
