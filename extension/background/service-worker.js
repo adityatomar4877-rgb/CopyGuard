@@ -11,7 +11,7 @@
 // ============================================
 //  CHANGE THIS to your Render URL after deploy
 // ============================================
-const BACKEND_URL = "localhost:8000";
+const BACKEND_URL = "copyguard-backend-production-f05e.up.railway.app";
 // ============================================
 //  Example: "copyguard-backend.onrender.com"
 //  (no http://, no ws://, no trailing slash)

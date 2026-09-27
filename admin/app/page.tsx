@@ -49,7 +49,7 @@ export default function Dashboard() {
       return;
     }
 
-    const ws = new WebSocket(`ws://localhost:8000/ws/admin?token=${token}`);
+    const ws = new WebSocket(`wss://copyguard-backend-production-f05e.up.railway.app/ws/admin?token=${token}`);
     wsRef.current = ws;
 
     ws.onopen = () => {
