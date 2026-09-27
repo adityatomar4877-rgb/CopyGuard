@@ -4,7 +4,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const nameInput = document.getElementById("name-input");
   const saveNameBtn = document.getElementById("save-name-btn");
   const userNameEl = document.getElementById("user-name");
-  const editNameBtn = document.getElementById("edit-name-btn");
   const toggle = document.getElementById("enabled-toggle");
   const toggleLabel = document.getElementById("toggle-label");
   const connEl = document.getElementById("conn");
@@ -14,29 +13,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Check if name is saved
   chrome.storage.local.get(["user_name", "protection_enabled"], (result) => {
-    const name = result.user_name;
-
-    if (!name) {
-      // First time — show name input
+    if (!result.user_name) {
+      // First time — show name input, no way to skip
       nameSection.style.display = "block";
       mainSection.style.display = "none";
       nameInput.focus();
     } else {
-      // Name exists — show main UI
-      showMain(name, result.protection_enabled !== false);
+      // Name exists — show main UI (name is permanent, no edit button)
+      showMain(result.user_name, result.protection_enabled !== false);
     }
   });
 
-  // Save name
+  // Save name (only happens once)
   saveNameBtn.addEventListener("click", () => {
     const name = nameInput.value.trim();
     if (!name) {
       nameInput.style.borderColor = "#f87171";
+      nameInput.focus();
       return;
     }
     chrome.storage.local.set({ user_name: name }, () => {
       showMain(name, true);
-      // Tell service worker to reconnect with the new name
       chrome.runtime.sendMessage({ type: "name_set", name });
     });
   });
@@ -46,19 +43,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.key === "Enter") saveNameBtn.click();
   });
 
-  // Edit name
-  editNameBtn.addEventListener("click", () => {
-    nameSection.style.display = "block";
-    mainSection.style.display = "none";
-    nameInput.value = userNameEl.textContent;
-    nameInput.focus();
-  });
-
   function showMain(name, protectionOn) {
     nameSection.style.display = "none";
     mainSection.style.display = "block";
     userNameEl.textContent = name;
-
     toggle.checked = protectionOn;
     updateUI(protectionOn);
   }
@@ -68,20 +56,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const enabled = toggle.checked;
     chrome.storage.local.set({ protection_enabled: enabled });
     updateUI(enabled);
-
-    // Tell every open tab
     chrome.tabs.query({}, (tabs) => {
       for (const tab of tabs) {
-        if (!tab.url || tab.url.startsWith("chrome://") || tab.url.startsWith("edge://") || tab.url.startsWith("chrome-extension://")) {
-          continue;
-        }
-        chrome.tabs
-          .sendMessage(tab.id, { type: "toggle_protection", enabled })
-          .catch(() => {});
+        if (!tab.url || tab.url.startsWith("chrome://") || tab.url.startsWith("edge://") || tab.url.startsWith("chrome-extension://")) continue;
+        chrome.tabs.sendMessage(tab.id, { type: "toggle_protection", enabled }).catch(() => {});
       }
     });
-
-    // Tell service worker to notify backend
     chrome.runtime.sendMessage({ type: "toggle", enabled });
   });
 
@@ -89,21 +69,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if (enabled) {
       toggleLabel.textContent = "Protection ON";
       toggleLabel.style.color = "#4ade80";
-      copyState.textContent = "Blocked";
-      copyState.className = "blocked";
-      cutState.textContent = "Blocked";
-      cutState.className = "blocked";
-      pasteState.textContent = "Blocked";
-      pasteState.className = "blocked";
+      copyState.textContent = "Blocked"; copyState.className = "blocked";
+      cutState.textContent = "Blocked"; cutState.className = "blocked";
+      pasteState.textContent = "Blocked"; pasteState.className = "blocked";
     } else {
       toggleLabel.textContent = "Protection OFF";
       toggleLabel.style.color = "#f87171";
-      copyState.textContent = "Allowed";
-      copyState.className = "disabled";
-      cutState.textContent = "Allowed";
-      cutState.className = "disabled";
-      pasteState.textContent = "Allowed";
-      pasteState.className = "disabled";
+      copyState.textContent = "Allowed"; copyState.className = "disabled";
+      cutState.textContent = "Allowed"; cutState.className = "disabled";
+      pasteState.textContent = "Allowed"; pasteState.className = "disabled";
     }
   }
 

@@ -18,11 +18,11 @@
 
     /* Name input section */
     .name-section { margin-bottom: 12px; }
-    .name-input { width: 100%; padding: 8px 10px; border: 1px solid #334155; border-radius: 8px; background: #1e293b; color: #e2e8f0; font-size: 13px; outline: none; margin-bottom: 8px; }
+    .name-input { width: 100%; padding: 10px 12px; border: 1px solid #334155; border-radius: 8px; background: #1e293b; color: #e2e8f0; font-size: 14px; outline: none; margin-bottom: 10px; }
     .name-input:focus { border-color: #6366f1; }
-    .btn { width: 100%; padding: 8px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn { width: 100%; padding: 10px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
     .btn-primary { background: linear-gradient(135deg, #6366f1, #7c3aed); color: white; }
-    .btn-edit { background: #1e293b; color: #94a3b8; border: 1px solid #334155; margin-top: 4px; font-size: 11px; }
+    .btn-primary:hover { opacity: 0.9; }
 
     /* Toggle switch */
     .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; }
@@ -39,11 +39,11 @@
   <div class="logo">🛡️ CopyGuard</div>
   <div class="sub">Copy/Paste Protection</div>
 
-  <!-- Name input (shown first time) -->
+  <!-- Name input (shown first time only) -->
   <div id="name-section" class="name-section" style="display:none;">
-    <p style="font-size:13px; color:#94a3b8; margin-bottom:8px;">Welcome! What's your name?</p>
-    <input type="text" id="name-input" class="name-input" placeholder="Enter your name" maxlength="30" />
-    <button id="save-name-btn" class="btn btn-primary">Save & Continue</button>
+    <p style="font-size:14px; color:#94a3b8; margin-bottom:8px;">Welcome! Enter your name to get started:</p>
+    <input type="text" id="name-input" class="name-input" placeholder="Your name" maxlength="30" />
+    <button id="save-name-btn" class="btn btn-primary">Start</button>
   </div>
 
   <!-- Main status (shown after name is saved) -->
@@ -52,7 +52,6 @@
       <span class="label">Name</span>
       <span id="user-name" style="font-size:13px; font-weight:600; color:#818cf8;"></span>
     </div>
-    <button id="edit-name-btn" class="btn btn-edit">Edit Name</button>
 
     <div class="divider"></div>
 
