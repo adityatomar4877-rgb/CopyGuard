@@ -47,6 +47,24 @@ chrome.storage.local.get("user_name", (result) => {
   }
 });
 
+// Watch for storage changes — if user_name is removed/cleared, disconnect
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && "user_name" in changes) {
+    if (!changes.user_name.newValue) {
+      // Name was cleared — disconnect WebSocket
+      console.log("[CopyGuard] Name cleared — disconnecting");
+      savedName = null;
+      if (ws) {
+        ws.onclose = null;
+        ws.close();
+        ws = null;
+      }
+      stopHeartbeat();
+      chrome.storage.local.set({ connected: false });
+    }
+  }
+});
+
 function getWsUrl() {
   // Pass the name as a query param so the backend knows who we are
   const nameParam = savedName ? `?name=${encodeURIComponent(savedName)}` : "";
