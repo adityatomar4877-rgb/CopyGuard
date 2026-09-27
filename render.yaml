@@ -1,13 +1,11 @@
 # Render Blueprint for CopyGuard backend
-# This file tells Render how to deploy the backend automatically.
-# Docs: https://render.com/docs/blueprint-spec
 
 services:
   - type: web
     name: copyguard-backend
     runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     autoDeploy: true
     envVars:
