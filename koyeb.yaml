@@ -1,0 +1,8 @@
+# Koyeb build config — runs from repo root
+
+build:
+  commands:
+    - pip install -r backend/requirements.txt
+
+run:
+  command: cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000
