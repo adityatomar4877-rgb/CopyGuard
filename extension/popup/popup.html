@@ -66,7 +66,7 @@
   </div>
 
   <script>
-    // ALL INLINE — no external file
+  document.addEventListener("DOMContentLoaded", function () {
     var nameSection = document.getElementById("name-section");
     var mainSection = document.getElementById("main-section");
     var nameInput = document.getElementById("name-input");
@@ -82,17 +82,16 @@
     // Check if name already saved
     chrome.storage.local.get(["user_name", "protection_enabled"], function (result) {
       if (result.user_name) {
-        // Name exists — hide name input, show main
         nameSection.style.display = "none";
         mainSection.style.display = "block";
         userNameEl.textContent = result.user_name;
         toggle.checked = result.protection_enabled !== false;
         updateUI(toggle.checked);
       }
-      // No name? name-section is already visible in HTML, nothing to do
     });
 
-    saveNameBtn.onclick = function () {
+    // Save name button
+    saveNameBtn.addEventListener("click", function () {
       var name = nameInput.value.trim();
       if (!name) {
         nameInput.style.borderColor = "#f87171";
@@ -107,13 +106,17 @@
         updateUI(true);
         chrome.runtime.sendMessage({ type: "name_set", name: name });
       });
-    };
-
-    nameInput.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") saveNameBtn.onclick();
     });
 
-    toggle.onchange = function () {
+    // Enter key saves name
+    nameInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        saveNameBtn.click();
+      }
+    });
+
+    // Toggle handler
+    toggle.addEventListener("change", function () {
       var enabled = toggle.checked;
       chrome.storage.local.set({ protection_enabled: enabled });
       updateUI(enabled);
@@ -124,7 +127,7 @@
         });
       });
       chrome.runtime.sendMessage({ type: "toggle", enabled: enabled });
-    };
+    });
 
     function updateUI(enabled) {
       if (enabled) {
@@ -142,6 +145,7 @@
       }
     }
 
+    // Connection status
     chrome.runtime.sendMessage({ type: "get_status" }, function (status) {
       if (status && status.connected) {
         connEl.textContent = "🟢 Connected";
@@ -151,6 +155,7 @@
         connEl.className = "badge off";
       }
     });
+  });
   </script>
 </body>
 </html>
