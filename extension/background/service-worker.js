@@ -36,11 +36,14 @@ let reconnectAttempts = 0;
 let eventQueue = [];
 let savedName = null;
 
-// Load saved name from storage
+// Load saved name from storage, then connect
 chrome.storage.local.get("user_name", (result) => {
   if (result.user_name) {
     savedName = result.user_name;
     console.log("[CopyGuard] Loaded name:", savedName);
+    connect();
+  } else {
+    console.log("[CopyGuard] No name yet, waiting for user to enter name in popup");
   }
 });
 
@@ -75,8 +78,10 @@ function connect() {
     try {
       const msg = JSON.parse(event.data);
       if (msg.type === "connected") {
-        chrome.storage.local.set({ user_id: msg.user_id, user_name: msg.name });
-        console.log("[CopyGuard] Server ack, user:", msg.name);
+        // Save user_id but DON'T save the server-assigned name as user_name.
+        // The real name comes from the popup when the user types it.
+        chrome.storage.local.set({ user_id: msg.user_id });
+        console.log("[CopyGuard] Server ack, user_id:", msg.user_id);
       }
     } catch (e) {}
   };
@@ -170,11 +175,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   return true;
 });
 
-connect();
-
 chrome.runtime.onStartup.addListener(() => {
-  console.log("[CopyGuard] onStartup — reconnecting");
-  connect();
+  console.log("[CopyGuard] onStartup");
+  chrome.storage.local.get("user_name", (result) => {
+    if (result.user_name) {
+      savedName = result.user_name;
+      connect();
+    }
+  });
 });
 
 chrome.runtime.onMessage.addListener((msg) => {
