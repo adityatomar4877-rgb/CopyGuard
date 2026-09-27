@@ -1,7 +1,7 @@
 /**
  * CopyGuard content script — minimal.
- * Blocks copy + paste, reports attempts to service worker.
- * Respects the enable/disable toggle from the popup.
+ * Blocks copy + paste when protection is ON.
+ * When protection is OFF, still logs the action (as ALLOWED) but doesn't block.
  * Shows a small badge on the page so users can verify it's active.
  */
 
@@ -38,118 +38,76 @@
     }
   }
 
-  // Show a small badge in the corner so the user knows it's working
+  // Show badge
   function showBadge() {
-    // Remove existing badge
     const existing = document.getElementById("copyguard-badge");
     if (existing) existing.remove();
-
     if (!protectionEnabled) return;
 
-    // Wait for body to be available
     function addBadge() {
-      if (!document.body) {
-        setTimeout(addBadge, 100);
-        return;
-      }
-
+      if (!document.body) { setTimeout(addBadge, 100); return; }
       const badge = document.createElement("div");
       badge.id = "copyguard-badge";
       badge.textContent = "🛡️ CopyGuard Active";
       badge.style.cssText =
-        "position:fixed !important;" +
-        "bottom:10px !important;" +
-        "right:10px !important;" +
-        "background:#0f172a !important;" +
-        "color:#4ade80 !important;" +
-        "padding:6px 12px !important;" +
-        "border-radius:8px !important;" +
-        "font-size:12px !important;" +
-        "font-family:system-ui,sans-serif !important;" +
-        "z-index:2147483647 !important;" +
-        "pointer-events:none !important;" +
-        "opacity:0.9 !important;" +
-        "transition:opacity 1s !important;" +
-        "border:1px solid #334155 !important;";
+        "position:fixed !important;bottom:10px !important;right:10px !important;" +
+        "background:#0f172a !important;color:#4ade80 !important;padding:6px 12px !important;" +
+        "border-radius:8px !important;font-size:12px !important;font-family:system-ui,sans-serif !important;" +
+        "z-index:2147483647 !important;pointer-events:none !important;opacity:0.9 !important;" +
+        "transition:opacity 1s !important;border:1px solid #334155 !important;";
       document.body.appendChild(badge);
-
-      // Fade out after 4 seconds
       setTimeout(() => {
-        if (badge.parentNode) {
-          badge.style.opacity = "0";
-          setTimeout(() => badge.remove(), 1000);
-        }
+        if (badge.parentNode) { badge.style.opacity = "0"; setTimeout(() => badge.remove(), 1000); }
       }, 4000);
     }
-
     addBadge();
   }
 
-  // Block copy
-  document.addEventListener(
-    "copy",
-    function (e) {
-      if (!protectionEnabled) return;
-      e.preventDefault();
-      e.stopPropagation();
+  // Copy — block when ON, log when OFF
+  document.addEventListener("copy", function (e) {
+    if (protectionEnabled) {
+      e.preventDefault(); e.stopPropagation();
       report("COPY_ATTEMPT");
-      console.log("[CopyGuard] Blocked copy");
-    },
-    true
-  );
+    } else {
+      report("COPY_ALLOWED");
+    }
+  }, true);
 
-  // Block cut
-  document.addEventListener(
-    "cut",
-    function (e) {
-      if (!protectionEnabled) return;
-      e.preventDefault();
-      e.stopPropagation();
+  // Cut — block when ON, log when OFF
+  document.addEventListener("cut", function (e) {
+    if (protectionEnabled) {
+      e.preventDefault(); e.stopPropagation();
       report("CUT_ATTEMPT");
-      console.log("[CopyGuard] Blocked cut");
-    },
-    true
-  );
+    } else {
+      report("CUT_ALLOWED");
+    }
+  }, true);
 
-  // Block paste
-  document.addEventListener(
-    "paste",
-    function (e) {
-      if (!protectionEnabled) return;
-      e.preventDefault();
-      e.stopPropagation();
+  // Paste — block when ON, log when OFF
+  document.addEventListener("paste", function (e) {
+    if (protectionEnabled) {
+      e.preventDefault(); e.stopPropagation();
       report("PASTE_ATTEMPT");
-      console.log("[CopyGuard] Blocked paste");
-    },
-    true
-  );
+    } else {
+      report("PASTE_ALLOWED");
+    }
+  }, true);
 
-  // Block Ctrl+C, Ctrl+V, Ctrl+X (and Cmd on Mac)
-  document.addEventListener(
-    "keydown",
-    function (e) {
-      if (!protectionEnabled) return;
-      if (!(e.ctrlKey || e.metaKey)) return;
-      const key = e.key.toLowerCase();
-      if (key === "c") {
-        e.preventDefault();
-        e.stopPropagation();
-        report("COPY_ATTEMPT");
-        console.log("[CopyGuard] Blocked Ctrl+C");
-      } else if (key === "v") {
-        e.preventDefault();
-        e.stopPropagation();
-        report("PASTE_ATTEMPT");
-        console.log("[CopyGuard] Blocked Ctrl+V");
-      } else if (key === "x") {
-        e.preventDefault();
-        e.stopPropagation();
-        report("CUT_ATTEMPT");
-        console.log("[CopyGuard] Blocked Ctrl+X");
-      }
-    },
-    true
-  );
+  // Ctrl+C, Ctrl+V, Ctrl+X
+  document.addEventListener("keydown", function (e) {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    const key = e.key.toLowerCase();
+
+    if (protectionEnabled) {
+      if (key === "c") { e.preventDefault(); e.stopPropagation(); report("COPY_ATTEMPT"); }
+      else if (key === "v") { e.preventDefault(); e.stopPropagation(); report("PASTE_ATTEMPT"); }
+      else if (key === "x") { e.preventDefault(); e.stopPropagation(); report("CUT_ATTEMPT"); }
+    } else {
+      if (key === "c") { report("COPY_ALLOWED"); }
+      else if (key === "v") { report("PASTE_ALLOWED"); }
+      else if (key === "x") { report("CUT_ALLOWED"); }
+    }
+  }, true);
 
   console.log("[CopyGuard] Content script loaded on", window.location.href);
   showBadge();

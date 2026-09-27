@@ -49,6 +49,9 @@ admin_wss: list = []
 # recent activity feed (list of dicts, newest first, max 200)
 activity_feed: list = []
 
+# per-user log history: user_id -> list of events (max 500 per user)
+user_logs: dict = {}
+
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
@@ -57,6 +60,19 @@ def now_iso():
 def add_activity(item: dict):
     activity_feed.insert(0, item)
     del activity_feed[200:]
+
+
+def add_user_log(user_id: str, item: dict):
+    """Store an event in the per-user log history."""
+    if user_id not in user_logs:
+        user_logs[user_id] = []
+    user_logs[user_id].insert(0, item)
+    del user_logs[user_id][500:]  # cap at 500 per user
+
+
+def get_user_logs(user_id: str) -> list:
+    """Return the log history for a user."""
+    return user_logs.get(user_id, [])
 
 
 async def broadcast_to_admins(message: dict):
@@ -177,21 +193,19 @@ async def ws_user(ws: WebSocket, name: str = ""):
 
             elif msg.get("type") == "security_event":
                 event = msg.get("event", "UNKNOWN")
+                event_data = {
+                    "type": "security_event",
+                    "event": event,
+                    "user_id": user_id,
+                    "name": user_name,
+                    "timestamp": now_iso(),
+                    "protection_enabled": online_users.get(user_id, {}).get("protection_enabled", True),
+                }
                 # Broadcast to admins
-                await broadcast_to_admins({
-                    "type": "security_event",
-                    "event": event,
-                    "user_id": user_id,
-                    "name": user_name,
-                    "timestamp": now_iso(),
-                })
-                add_activity({
-                    "type": "security_event",
-                    "event": event,
-                    "user_id": user_id,
-                    "name": user_name,
-                    "timestamp": now_iso(),
-                })
+                await broadcast_to_admins(event_data)
+                # Store in global feed + per-user log
+                add_activity(event_data)
+                add_user_log(user_id, event_data)
                 log.info("SECURITY_EVENT user=%s event=%s", user_name, event)
 
     except WebSocketDisconnect:
@@ -253,6 +267,18 @@ async def ws_admin(ws: WebSocket, token: str = ""):
             msg = json.loads(raw)
             if msg.get("type") == "ping":
                 await ws.send_text(json.dumps({"type": "pong"}))
+            elif msg.get("type") == "get_user_logs":
+                uid = msg.get("user_id")
+                logs = get_user_logs(uid) if uid else []
+                user_info = online_users.get(uid, {})
+                await ws.send_text(json.dumps({
+                    "type": "user_logs",
+                    "user_id": uid,
+                    "name": user_info.get("name", "Unknown"),
+                    "protection_enabled": user_info.get("protection_enabled", True),
+                    "connected_at": user_info.get("connected_at"),
+                    "logs": logs,
+                }))
     except WebSocketDisconnect:
         pass
     except Exception as e:
