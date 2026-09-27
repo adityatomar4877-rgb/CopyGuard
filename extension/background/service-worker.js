@@ -34,13 +34,29 @@ let heartbeatTimer = null;
 let reconnectTimer = null;
 let reconnectAttempts = 0;
 let eventQueue = [];
+let savedName = null;
+
+// Load saved name from storage
+chrome.storage.local.get("user_name", (result) => {
+  if (result.user_name) {
+    savedName = result.user_name;
+    console.log("[CopyGuard] Loaded name:", savedName);
+  }
+});
+
+function getWsUrl() {
+  // Pass the name as a query param so the backend knows who we are
+  const nameParam = savedName ? `?name=${encodeURIComponent(savedName)}` : "";
+  return WS_URL + nameParam;
+}
 
 function connect() {
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
 
-  console.log("[CopyGuard] Connecting to", WS_URL);
+  const url = getWsUrl();
+  console.log("[CopyGuard] Connecting to", url);
   try {
-    ws = new WebSocket(WS_URL);
+    ws = new WebSocket(url);
   } catch (e) {
     console.error("[CopyGuard] Connect failed:", e);
     scheduleReconnect();
@@ -131,11 +147,22 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     sendEvent(msg.event);
   }
   if (msg.type === "toggle") {
-    // Forward toggle state to backend so admin sees it
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: "toggle", enabled: msg.enabled }));
       console.log("[CopyGuard] Sent toggle:", msg.enabled);
     }
+  }
+  if (msg.type === "name_set") {
+    // User just entered their name — save it and reconnect with the name
+    savedName = msg.name;
+    console.log("[CopyGuard] Name set:", savedName, "— reconnecting");
+    // Close existing connection and reconnect with name
+    if (ws) {
+      ws.onclose = null;
+      ws.close();
+      ws = null;
+    }
+    connect();
   }
   if (msg.type === "get_status") {
     sendResponse({ connected: ws && ws.readyState === WebSocket.OPEN });

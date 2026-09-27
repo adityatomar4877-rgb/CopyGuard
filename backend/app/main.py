@@ -100,10 +100,11 @@ async def verify(token: str):
 # ---------------------------------------------------------------------------
 
 @app.websocket("/ws/user")
-async def ws_user(ws: WebSocket):
+async def ws_user(ws: WebSocket, name: str = ""):
     await ws.accept()
     user_id = uuid.uuid4().hex[:8]
-    user_name = f"User-{user_id}"
+    # Use the name provided by the extension, or fall back to User-xxxx
+    user_name = name.strip() if name and name.strip() else f"User-{user_id}"
 
     online_users[user_id] = {
         "id": user_id,

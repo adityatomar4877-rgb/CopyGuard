@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>CopyGuard</title>
   <style>
-    body { width: 260px; font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 16px; }
+    body { width: 280px; font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 16px; }
     .logo { font-size: 16px; font-weight: 700; color: #818cf8; margin-bottom: 4px; }
     .sub { font-size: 11px; color: #64748b; margin-bottom: 12px; }
     .row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 13px; }
@@ -15,6 +15,14 @@
     .divider { height: 1px; background: #1e293b; margin: 8px 0; }
     .blocked { color: #4ade80; }
     .disabled { color: #94a3b8; }
+
+    /* Name input section */
+    .name-section { margin-bottom: 12px; }
+    .name-input { width: 100%; padding: 8px 10px; border: 1px solid #334155; border-radius: 8px; background: #1e293b; color: #e2e8f0; font-size: 13px; outline: none; margin-bottom: 8px; }
+    .name-input:focus { border-color: #6366f1; }
+    .btn { width: 100%; padding: 8px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-primary { background: linear-gradient(135deg, #6366f1, #7c3aed); color: white; }
+    .btn-edit { background: #1e293b; color: #94a3b8; border: 1px solid #334155; margin-top: 4px; font-size: 11px; }
 
     /* Toggle switch */
     .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; }
@@ -31,25 +39,43 @@
   <div class="logo">🛡️ CopyGuard</div>
   <div class="sub">Copy/Paste Protection</div>
 
-  <!-- Enable/Disable toggle -->
-  <div class="toggle-row">
-    <span class="toggle-label" id="toggle-label">Protection ON</span>
-    <label class="toggle">
-      <input type="checkbox" id="enabled-toggle" checked />
-      <span class="slider"></span>
-    </label>
+  <!-- Name input (shown first time) -->
+  <div id="name-section" class="name-section" style="display:none;">
+    <p style="font-size:13px; color:#94a3b8; margin-bottom:8px;">Welcome! What's your name?</p>
+    <input type="text" id="name-input" class="name-input" placeholder="Enter your name" maxlength="30" />
+    <button id="save-name-btn" class="btn btn-primary">Save & Continue</button>
   </div>
 
-  <div class="divider"></div>
+  <!-- Main status (shown after name is saved) -->
+  <div id="main-section" style="display:none;">
+    <div class="row" style="margin-bottom:4px;">
+      <span class="label">Name</span>
+      <span id="user-name" style="font-size:13px; font-weight:600; color:#818cf8;"></span>
+    </div>
+    <button id="edit-name-btn" class="btn btn-edit">Edit Name</button>
 
-  <div class="row">
-    <span class="label">Connection</span>
-    <span id="conn" class="badge off">Checking...</span>
+    <div class="divider"></div>
+
+    <!-- Toggle -->
+    <div class="toggle-row">
+      <span class="toggle-label" id="toggle-label">Protection ON</span>
+      <label class="toggle">
+        <input type="checkbox" id="enabled-toggle" checked />
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="row">
+      <span class="label">Connection</span>
+      <span id="conn" class="badge off">Checking...</span>
+    </div>
+    <div class="divider"></div>
+    <div class="row"><span class="label">Copy</span><span id="copy-state" class="blocked">Blocked</span></div>
+    <div class="row"><span class="label">Cut</span><span id="cut-state" class="blocked">Blocked</span></div>
+    <div class="row"><span class="label">Paste</span><span id="paste-state" class="blocked">Blocked</span></div>
   </div>
-  <div class="divider"></div>
-  <div class="row"><span class="label">Copy</span><span id="copy-state" class="blocked">Blocked</span></div>
-  <div class="row"><span class="label">Cut</span><span id="cut-state" class="blocked">Blocked</span></div>
-  <div class="row"><span class="label">Paste</span><span id="paste-state" class="blocked">Blocked</span></div>
 
   <script src="popup.js"></script>
 </body>

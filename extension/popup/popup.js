@@ -1,4 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const nameSection = document.getElementById("name-section");
+  const mainSection = document.getElementById("main-section");
+  const nameInput = document.getElementById("name-input");
+  const saveNameBtn = document.getElementById("save-name-btn");
+  const userNameEl = document.getElementById("user-name");
+  const editNameBtn = document.getElementById("edit-name-btn");
   const toggle = document.getElementById("enabled-toggle");
   const toggleLabel = document.getElementById("toggle-label");
   const connEl = document.getElementById("conn");
@@ -6,12 +12,56 @@ document.addEventListener("DOMContentLoaded", () => {
   const cutState = document.getElementById("cut-state");
   const pasteState = document.getElementById("paste-state");
 
-  // Load saved state (default: enabled)
-  chrome.storage.local.get("protection_enabled", (result) => {
-    const enabled = result.protection_enabled !== false;
-    toggle.checked = enabled;
-    updateUI(enabled);
+  // Check if name is saved
+  chrome.storage.local.get(["user_name", "protection_enabled"], (result) => {
+    const name = result.user_name;
+
+    if (!name) {
+      // First time — show name input
+      nameSection.style.display = "block";
+      mainSection.style.display = "none";
+      nameInput.focus();
+    } else {
+      // Name exists — show main UI
+      showMain(name, result.protection_enabled !== false);
+    }
   });
+
+  // Save name
+  saveNameBtn.addEventListener("click", () => {
+    const name = nameInput.value.trim();
+    if (!name) {
+      nameInput.style.borderColor = "#f87171";
+      return;
+    }
+    chrome.storage.local.set({ user_name: name }, () => {
+      showMain(name, true);
+      // Tell service worker to reconnect with the new name
+      chrome.runtime.sendMessage({ type: "name_set", name });
+    });
+  });
+
+  // Enter key saves name
+  nameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") saveNameBtn.click();
+  });
+
+  // Edit name
+  editNameBtn.addEventListener("click", () => {
+    nameSection.style.display = "block";
+    mainSection.style.display = "none";
+    nameInput.value = userNameEl.textContent;
+    nameInput.focus();
+  });
+
+  function showMain(name, protectionOn) {
+    nameSection.style.display = "none";
+    mainSection.style.display = "block";
+    userNameEl.textContent = name;
+
+    toggle.checked = protectionOn;
+    updateUI(protectionOn);
+  }
 
   // Toggle handler
   toggle.addEventListener("change", () => {
@@ -19,8 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.storage.local.set({ protection_enabled: enabled });
     updateUI(enabled);
 
-    // Tell every open tab to enable/disable protection
-    // Skip chrome:// and edge:// URLs which can't receive messages
+    // Tell every open tab
     chrome.tabs.query({}, (tabs) => {
       for (const tab of tabs) {
         if (!tab.url || tab.url.startsWith("chrome://") || tab.url.startsWith("edge://") || tab.url.startsWith("chrome-extension://")) {
@@ -32,7 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // Tell the service worker to notify the backend
+    // Tell service worker to notify backend
     chrome.runtime.sendMessage({ type: "toggle", enabled });
   });
 
