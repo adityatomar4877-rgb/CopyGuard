@@ -16,8 +16,14 @@ document.addEventListener("DOMContentLoaded", function () {
   // Check if name already saved
   chrome.storage.local.get(["user_name", "protection_enabled"], function (result) {
     console.log("[CopyGuard Popup] Stored data:", JSON.stringify(result));
-    if (result.user_name) {
+    if (result.user_name && result.user_name.length > 0) {
       showMain(result.user_name, result.protection_enabled !== false);
+    } else {
+      // No name — make sure name section is visible
+      console.log("[CopyGuard Popup] No name found, showing name input");
+      nameSection.style.display = "block";
+      mainSection.style.display = "none";
+      nameInput.focus();
     }
   });
 
