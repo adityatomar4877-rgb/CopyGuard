@@ -13,8 +13,9 @@ import time
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)-7s | %(message)s")
@@ -268,7 +269,7 @@ async def ws_admin(ws: WebSocket, token: str = ""):
 
 @app.get("/health")
 async def health():
-    """Full health check — used by Render for uptime monitoring."""
+    """Full health check — used by Render/Railway/UptimeRobot for uptime monitoring."""
     return {
         "status": "ok",
         "service": "copyguard",
@@ -277,6 +278,12 @@ async def health():
         "total_events": len(activity_feed),
         "timestamp": now_iso(),
     }
+
+
+@app.head("/health")
+async def health_head():
+    """HEAD response for UptimeRobot / monitoring tools that send HEAD requests."""
+    return JSONResponse(status_code=200, content=None)
 
 
 @app.get("/")
