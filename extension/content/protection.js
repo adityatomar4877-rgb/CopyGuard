@@ -1,16 +1,33 @@
 /**
  * CopyGuard content script — minimal.
  * Blocks copy + paste, reports attempts to service worker.
+ * Respects the enable/disable toggle from the popup.
  */
 
 (function () {
   "use strict";
 
+  let protectionEnabled = true;
+
+  // Load saved state on startup
+  chrome.storage.local.get("protection_enabled", (result) => {
+    protectionEnabled = result.protection_enabled !== false; // default true
+    console.log("[CopyGuard] Protection", protectionEnabled ? "ON" : "OFF", "on", window.location.href);
+  });
+
+  // Listen for toggle messages from popup
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg.type === "toggle_protection") {
+      protectionEnabled = msg.enabled;
+      console.log("[CopyGuard] Protection", protectionEnabled ? "enabled" : "disabled");
+    }
+    return true;
+  });
+
   function report(event) {
     try {
       chrome.runtime.sendMessage({ type: "security_event", event: event });
     } catch (e) {
-      // Service worker might be asleep — message will wake it
       console.warn("[CopyGuard] Could not send event:", e);
     }
   }
@@ -19,6 +36,7 @@
   document.addEventListener(
     "copy",
     function (e) {
+      if (!protectionEnabled) return;
       e.preventDefault();
       e.stopPropagation();
       report("COPY_ATTEMPT");
@@ -31,6 +49,7 @@
   document.addEventListener(
     "cut",
     function (e) {
+      if (!protectionEnabled) return;
       e.preventDefault();
       e.stopPropagation();
       report("CUT_ATTEMPT");
@@ -43,6 +62,7 @@
   document.addEventListener(
     "paste",
     function (e) {
+      if (!protectionEnabled) return;
       e.preventDefault();
       e.stopPropagation();
       report("PASTE_ATTEMPT");
@@ -55,6 +75,7 @@
   document.addEventListener(
     "keydown",
     function (e) {
+      if (!protectionEnabled) return;
       if (!(e.ctrlKey || e.metaKey)) return;
       const key = e.key.toLowerCase();
       if (key === "c") {
@@ -77,5 +98,5 @@
     true
   );
 
-  console.log("[CopyGuard] Protection active on", window.location.href);
+  console.log("[CopyGuard] Content script loaded on", window.location.href);
 })();

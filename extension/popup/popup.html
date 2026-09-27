@@ -4,27 +4,53 @@
   <meta charset="UTF-8" />
   <title>CopyGuard</title>
   <style>
-    body { width: 240px; font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 16px; }
-    .logo { font-size: 16px; font-weight: 700; color: #818cf8; margin-bottom: 12px; }
-    .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+    body { width: 260px; font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 16px; }
+    .logo { font-size: 16px; font-weight: 700; color: #818cf8; margin-bottom: 4px; }
+    .sub { font-size: 11px; color: #64748b; margin-bottom: 12px; }
+    .row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 13px; }
     .label { color: #94a3b8; }
     .badge { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 12px; }
     .on { background: rgba(34,197,94,.15); color: #4ade80; }
     .off { background: rgba(239,68,68,.15); color: #f87171; }
     .divider { height: 1px; background: #1e293b; margin: 8px 0; }
     .blocked { color: #4ade80; }
+    .disabled { color: #94a3b8; }
+
+    /* Toggle switch */
+    .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; }
+    .toggle-label { font-size: 14px; font-weight: 600; color: #e2e8f0; }
+    .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; background: #334155; border-radius: 24px; transition: 0.3s; }
+    .slider:before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+    .toggle input:checked + .slider { background: #6366f1; }
+    .toggle input:checked + .slider:before { transform: translateX(20px); }
   </style>
 </head>
 <body>
   <div class="logo">🛡️ CopyGuard</div>
+  <div class="sub">Copy/Paste Protection</div>
+
+  <!-- Enable/Disable toggle -->
+  <div class="toggle-row">
+    <span class="toggle-label" id="toggle-label">Protection ON</span>
+    <label class="toggle">
+      <input type="checkbox" id="enabled-toggle" checked />
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="divider"></div>
+
   <div class="row">
     <span class="label">Connection</span>
     <span id="conn" class="badge off">Checking...</span>
   </div>
   <div class="divider"></div>
-  <div class="row"><span class="label">Copy</span><span class="blocked">Blocked</span></div>
-  <div class="row"><span class="label">Cut</span><span class="blocked">Blocked</span></div>
-  <div class="row"><span class="label">Paste</span><span class="blocked">Blocked</span></div>
+  <div class="row"><span class="label">Copy</span><span id="copy-state" class="blocked">Blocked</span></div>
+  <div class="row"><span class="label">Cut</span><span id="cut-state" class="blocked">Blocked</span></div>
+  <div class="row"><span class="label">Paste</span><span id="paste-state" class="blocked">Blocked</span></div>
+
   <script src="popup.js"></script>
 </body>
 </html>
