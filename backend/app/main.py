@@ -134,7 +134,7 @@ async def ws_user(ws: WebSocket, name: str = ""):
     log.info("USER_CONNECTED id=%s name=%s (online=%s)", user_id, user_name, len(online_users))
 
     # Notify admins
-    await broadcast_to_admins({
+    connect_data = {
         "type": "presence",
         "event": "USER_CONNECTED",
         "user_id": user_id,
@@ -142,14 +142,10 @@ async def ws_user(ws: WebSocket, name: str = ""):
         "status": "online",
         "protection_enabled": True,
         "timestamp": now_iso(),
-    })
-    add_activity({
-        "type": "presence",
-        "event": "USER_CONNECTED",
-        "user_id": user_id,
-        "name": user_name,
-        "timestamp": now_iso(),
-    })
+    }
+    await broadcast_to_admins(connect_data)
+    add_activity(connect_data)
+    add_user_log(user_id, connect_data)
 
     # Send connected ack to the extension
     await ws.send_text(json.dumps({
@@ -174,7 +170,7 @@ async def ws_user(ws: WebSocket, name: str = ""):
                     online_users[user_id]["protection_enabled"] = enabled
                 state = "PROTECTION_ENABLED" if enabled else "PROTECTION_DISABLED"
                 log.info("TOGGLE user=%s enabled=%s", user_name, enabled)
-                await broadcast_to_admins({
+                toggle_data = {
                     "type": "presence",
                     "event": state,
                     "user_id": user_id,
@@ -182,14 +178,10 @@ async def ws_user(ws: WebSocket, name: str = ""):
                     "status": "online",
                     "protection_enabled": enabled,
                     "timestamp": now_iso(),
-                })
-                add_activity({
-                    "type": "presence",
-                    "event": state,
-                    "user_id": user_id,
-                    "name": user_name,
-                    "timestamp": now_iso(),
-                })
+                }
+                await broadcast_to_admins(toggle_data)
+                add_activity(toggle_data)
+                add_user_log(user_id, toggle_data)
 
             elif msg.get("type") == "security_event":
                 event = msg.get("event", "UNKNOWN")
@@ -213,23 +205,19 @@ async def ws_user(ws: WebSocket, name: str = ""):
     except Exception as e:
         log.error("WS user error: %s", e)
     finally:
-        online_users.pop(user_id, None)
-        log.info("USER_DISCONNECTED id=%s (online=%s)", user_id, len(online_users))
-        await broadcast_to_admins({
+        disconnect_data = {
             "type": "presence",
             "event": "USER_DISCONNECTED",
             "user_id": user_id,
             "name": user_name,
             "status": "offline",
             "timestamp": now_iso(),
-        })
-        add_activity({
-            "type": "presence",
-            "event": "USER_DISCONNECTED",
-            "user_id": user_id,
-            "name": user_name,
-            "timestamp": now_iso(),
-        })
+        }
+        online_users.pop(user_id, None)
+        log.info("USER_DISCONNECTED id=%s (online=%s)", user_id, len(online_users))
+        await broadcast_to_admins(disconnect_data)
+        add_activity(disconnect_data)
+        add_user_log(user_id, disconnect_data)
 
 
 # ---------------------------------------------------------------------------
