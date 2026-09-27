@@ -15,12 +15,10 @@
     .divider { height: 1px; background: #1e293b; margin: 8px 0; }
     .blocked { color: #4ade80; }
     .disabled { color: #94a3b8; }
-    .name-section { margin-bottom: 12px; }
     .name-input { width: 100%; padding: 10px 12px; border: 1px solid #334155; border-radius: 8px; background: #1e293b; color: #e2e8f0; font-size: 14px; outline: none; margin-bottom: 10px; }
     .name-input:focus { border-color: #6366f1; }
     .btn { width: 100%; padding: 10px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
     .btn-primary { background: linear-gradient(135deg, #6366f1, #7c3aed); color: white; }
-    .btn-primary:hover { opacity: 0.9; }
     .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; }
     .toggle-label { font-size: 14px; font-weight: 600; color: #e2e8f0; }
     .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; }
@@ -35,14 +33,14 @@
   <div class="logo">🛡️ CopyGuard</div>
   <div class="sub">Copy/Paste Protection</div>
 
-  <!-- Name input — VISIBLE BY DEFAULT, hidden by JS if name exists -->
-  <div id="name-section" class="name-section">
+  <!-- NAME INPUT — visible by default -->
+  <div id="name-section">
     <p style="font-size:14px; color:#94a3b8; margin-bottom:8px;">Welcome! Enter your name to get started:</p>
     <input type="text" id="name-input" class="name-input" placeholder="Your name" maxlength="30" />
     <button id="save-name-btn" class="btn btn-primary">Start</button>
   </div>
 
-  <!-- Main status — hidden by default, shown by JS after name is set -->
+  <!-- MAIN STATUS — hidden until name is saved -->
   <div id="main-section" style="display:none;">
     <div class="row" style="margin-bottom:4px;">
       <span class="label">Name</span>
@@ -67,6 +65,92 @@
     <div class="row"><span class="label">Paste</span><span id="paste-state" class="blocked">Blocked</span></div>
   </div>
 
-  <script src="popup.js"></script>
+  <script>
+    // ALL INLINE — no external file
+    var nameSection = document.getElementById("name-section");
+    var mainSection = document.getElementById("main-section");
+    var nameInput = document.getElementById("name-input");
+    var saveNameBtn = document.getElementById("save-name-btn");
+    var userNameEl = document.getElementById("user-name");
+    var toggle = document.getElementById("enabled-toggle");
+    var toggleLabel = document.getElementById("toggle-label");
+    var connEl = document.getElementById("conn");
+    var copyState = document.getElementById("copy-state");
+    var cutState = document.getElementById("cut-state");
+    var pasteState = document.getElementById("paste-state");
+
+    // Check if name already saved
+    chrome.storage.local.get(["user_name", "protection_enabled"], function (result) {
+      if (result.user_name) {
+        // Name exists — hide name input, show main
+        nameSection.style.display = "none";
+        mainSection.style.display = "block";
+        userNameEl.textContent = result.user_name;
+        toggle.checked = result.protection_enabled !== false;
+        updateUI(toggle.checked);
+      }
+      // No name? name-section is already visible in HTML, nothing to do
+    });
+
+    saveNameBtn.onclick = function () {
+      var name = nameInput.value.trim();
+      if (!name) {
+        nameInput.style.borderColor = "#f87171";
+        nameInput.focus();
+        return;
+      }
+      chrome.storage.local.set({ user_name: name, protection_enabled: true }, function () {
+        nameSection.style.display = "none";
+        mainSection.style.display = "block";
+        userNameEl.textContent = name;
+        toggle.checked = true;
+        updateUI(true);
+        chrome.runtime.sendMessage({ type: "name_set", name: name });
+      });
+    };
+
+    nameInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") saveNameBtn.onclick();
+    });
+
+    toggle.onchange = function () {
+      var enabled = toggle.checked;
+      chrome.storage.local.set({ protection_enabled: enabled });
+      updateUI(enabled);
+      chrome.tabs.query({}, function (tabs) {
+        tabs.forEach(function (tab) {
+          if (!tab.url || tab.url.indexOf("chrome://") === 0) return;
+          chrome.tabs.sendMessage(tab.id, { type: "toggle_protection", enabled: enabled }).catch(function(){});
+        });
+      });
+      chrome.runtime.sendMessage({ type: "toggle", enabled: enabled });
+    };
+
+    function updateUI(enabled) {
+      if (enabled) {
+        toggleLabel.textContent = "Protection ON";
+        toggleLabel.style.color = "#4ade80";
+        copyState.textContent = "Blocked"; copyState.className = "blocked";
+        cutState.textContent = "Blocked"; cutState.className = "blocked";
+        pasteState.textContent = "Blocked"; pasteState.className = "blocked";
+      } else {
+        toggleLabel.textContent = "Protection OFF";
+        toggleLabel.style.color = "#f87171";
+        copyState.textContent = "Allowed"; copyState.className = "disabled";
+        cutState.textContent = "Allowed"; cutState.className = "disabled";
+        pasteState.textContent = "Allowed"; pasteState.className = "disabled";
+      }
+    }
+
+    chrome.runtime.sendMessage({ type: "get_status" }, function (status) {
+      if (status && status.connected) {
+        connEl.textContent = "🟢 Connected";
+        connEl.className = "badge on";
+      } else {
+        connEl.textContent = "🔴 Disconnected";
+        connEl.className = "badge off";
+      }
+    });
+  </script>
 </body>
 </html>
