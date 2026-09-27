@@ -7,6 +7,7 @@ interface OnlineUser {
   id: string;
   name: string;
   connected_at: string;
+  protection_enabled?: boolean;
 }
 
 interface ActivityItem {
@@ -23,6 +24,8 @@ const EVENT_ICONS: Record<string, string> = {
   COPY_ATTEMPT: "📋",
   CUT_ATTEMPT: "✂️",
   PASTE_ATTEMPT: "📝",
+  PROTECTION_ENABLED: "🟢",
+  PROTECTION_DISABLED: "🟡",
 };
 
 export default function Dashboard() {
@@ -65,10 +68,19 @@ export default function Dashboard() {
       } else if (msg.type === "presence") {
         if (msg.event === "USER_CONNECTED") {
           setOnlineUsers((prev) =>
-            prev.some((u) => u.id === msg.user_id) ? prev : [...prev, { id: msg.user_id, name: msg.name, connected_at: msg.timestamp }]
+            prev.some((u) => u.id === msg.user_id)
+              ? prev
+              : [...prev, { id: msg.user_id, name: msg.name, connected_at: msg.timestamp, protection_enabled: msg.protection_enabled ?? true }]
           );
         } else if (msg.event === "USER_DISCONNECTED") {
           setOnlineUsers((prev) => prev.filter((u) => u.id !== msg.user_id));
+        } else if (msg.event === "PROTECTION_DISABLED" || msg.event === "PROTECTION_ENABLED") {
+          // Update the user's protection state in the list
+          setOnlineUsers((prev) =>
+            prev.map((u) =>
+              u.id === msg.user_id ? { ...u, protection_enabled: msg.protection_enabled } : u
+            )
+          );
         }
         addActivity({ type: "presence", event: msg.event, user_id: msg.user_id, name: msg.name, timestamp: msg.timestamp });
       } else if (msg.type === "security_event") {
@@ -154,15 +166,27 @@ export default function Dashboard() {
               {onlineUsers.length === 0 ? (
                 <div className="px-4 py-12 text-center text-slate-500 text-sm">No users online</div>
               ) : (
-                onlineUsers.map((u) => (
-                  <div key={u.id} className="flex items-center gap-3 px-4 py-3 border-b border-slate-800 last:border-0">
-                    <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
-                    <div>
-                      <p className="text-sm font-medium">{u.name}</p>
-                      <p className="text-xs text-slate-500">Connected {new Date(u.connected_at).toLocaleTimeString()}</p>
+                onlineUsers.map((u) => {
+                  const isProtected = u.protection_enabled !== false;
+                  return (
+                    <div key={u.id} className="flex items-center gap-3 px-4 py-3 border-b border-slate-800 last:border-0">
+                      {/* Status dot: green=protected, yellow=disabled */}
+                      <span className={`w-2.5 h-2.5 rounded-full ${isProtected ? "bg-green-500 animate-pulse" : "bg-yellow-500"}`} />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{u.name}</p>
+                        <p className="text-xs text-slate-500">
+                          {isProtected ? "Protected" : "Protection Disabled"} · {new Date(u.connected_at).toLocaleTimeString()}
+                        </p>
+                      </div>
+                      {/* Badge */}
+                      {isProtected ? (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/40 text-green-400">🟢 Protected</span>
+                      ) : (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-900/40 text-yellow-400">🟡 Disabled</span>
+                      )}
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -180,13 +204,18 @@ export default function Dashboard() {
                 activities.map((item, i) => {
                   const icon = EVENT_ICONS[item.event] || "•";
                   const isSecurity = item.type === "security_event";
+                  const isToggle = item.event === "PROTECTION_ENABLED" || item.event === "PROTECTION_DISABLED";
                   return (
                     <div key={i} className="flex items-start gap-3 px-4 py-2.5 border-b border-slate-800 last:border-0">
                       <span className="text-lg">{icon}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-slate-300">
-                          <span className={isSecurity ? "text-amber-400" : "text-green-400"}>{item.name}</span>{" "}
-                          {item.event === "USER_CONNECTED" ? "connected" : item.event === "USER_DISCONNECTED" ? "disconnected" : `attempted ${item.event.replace(/_/g, " ")}`}
+                          <span className={isSecurity ? "text-amber-400" : isToggle ? "text-yellow-400" : "text-green-400"}>{item.name}</span>{" "}
+                          {item.event === "USER_CONNECTED" ? "connected"
+                            : item.event === "USER_DISCONNECTED" ? "disconnected"
+                            : item.event === "PROTECTION_ENABLED" ? "enabled protection"
+                            : item.event === "PROTECTION_DISABLED" ? "disabled protection"
+                            : `attempted ${item.event.replace(/_/g, " ")}`}
                         </p>
                         <p className="text-xs text-slate-500">{new Date(item.timestamp).toLocaleTimeString()}</p>
                       </div>

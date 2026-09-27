@@ -130,6 +130,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "security_event") {
     sendEvent(msg.event);
   }
+  if (msg.type === "toggle") {
+    // Forward toggle state to backend so admin sees it
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "toggle", enabled: msg.enabled }));
+      console.log("[CopyGuard] Sent toggle:", msg.enabled);
+    }
+  }
   if (msg.type === "get_status") {
     sendResponse({ connected: ws && ws.readyState === WebSocket.OPEN });
   }

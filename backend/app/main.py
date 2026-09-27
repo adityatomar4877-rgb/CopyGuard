@@ -111,6 +111,7 @@ async def ws_user(ws: WebSocket):
         "connected_at": now_iso(),
         "last_heartbeat": time.monotonic(),
         "ws": ws,
+        "protection_enabled": True,  # default ON
     }
     log.info("USER_CONNECTED id=%s name=%s (online=%s)", user_id, user_name, len(online_users))
 
@@ -121,6 +122,7 @@ async def ws_user(ws: WebSocket):
         "user_id": user_id,
         "name": user_name,
         "status": "online",
+        "protection_enabled": True,
         "timestamp": now_iso(),
     })
     add_activity({
@@ -146,6 +148,30 @@ async def ws_user(ws: WebSocket):
             if msg.get("type") == "heartbeat":
                 if user_id in online_users:
                     online_users[user_id]["last_heartbeat"] = time.monotonic()
+
+            elif msg.get("type") == "toggle":
+                # User enabled/disabled protection from popup
+                enabled = msg.get("enabled", True)
+                if user_id in online_users:
+                    online_users[user_id]["protection_enabled"] = enabled
+                state = "PROTECTION_ENABLED" if enabled else "PROTECTION_DISABLED"
+                log.info("TOGGLE user=%s enabled=%s", user_name, enabled)
+                await broadcast_to_admins({
+                    "type": "presence",
+                    "event": state,
+                    "user_id": user_id,
+                    "name": user_name,
+                    "status": "online",
+                    "protection_enabled": enabled,
+                    "timestamp": now_iso(),
+                })
+                add_activity({
+                    "type": "presence",
+                    "event": state,
+                    "user_id": user_id,
+                    "name": user_name,
+                    "timestamp": now_iso(),
+                })
 
             elif msg.get("type") == "security_event":
                 event = msg.get("event", "UNKNOWN")
@@ -208,7 +234,12 @@ async def ws_admin(ws: WebSocket, token: str = ""):
     await ws.send_text(json.dumps({
         "type": "snapshot",
         "users": [
-            {"id": u["id"], "name": u["name"], "connected_at": u["connected_at"]}
+            {
+                "id": u["id"],
+                "name": u["name"],
+                "connected_at": u["connected_at"],
+                "protection_enabled": u.get("protection_enabled", True),
+            }
             for u in online_users.values()
         ],
         "activity": activity_feed[:50],

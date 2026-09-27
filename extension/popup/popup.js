@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
     updateUI(enabled);
   });
 
-  // Toggle handler — save state + notify all tabs
+  // Toggle handler — save state + notify tabs + tell backend
   toggle.addEventListener("change", () => {
     const enabled = toggle.checked;
     chrome.storage.local.set({ protection_enabled: enabled });
@@ -27,6 +27,9 @@ document.addEventListener("DOMContentLoaded", () => {
           .catch(() => {});
       }
     });
+
+    // Tell the service worker to notify the backend
+    chrome.runtime.sendMessage({ type: "toggle", enabled });
   });
 
   function updateUI(enabled) {
