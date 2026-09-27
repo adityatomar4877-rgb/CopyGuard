@@ -9,17 +9,22 @@
 
   let protectionEnabled = true;
 
-  // Load saved state on startup
-  chrome.storage.local.get("protection_enabled", (result) => {
-    protectionEnabled = result.protection_enabled !== false; // default true
-    console.log("[CopyGuard] Protection", protectionEnabled ? "ON" : "OFF", "on", window.location.href);
-  });
+  // Read saved state synchronously BEFORE attaching listeners.
+  // This prevents a brief window where blocking is active even
+  // when the user has toggled it off.
+  try {
+    chrome.storage.local.get("protection_enabled", (result) => {
+      protectionEnabled = result.protection_enabled !== false;
+      console.log("[CopyGuard] Initial state:", protectionEnabled ? "ON" : "OFF");
+    });
+  } catch (e) {}
 
-  // Listen for toggle messages from popup
-  chrome.runtime.onMessage.addListener((msg) => {
+  // Listen for live toggle from popup (fires immediately when user flips switch)
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.type === "toggle_protection") {
       protectionEnabled = msg.enabled;
-      console.log("[CopyGuard] Protection", protectionEnabled ? "enabled" : "disabled");
+      console.log("[CopyGuard] Toggle received:", msg.enabled ? "ON" : "OFF");
+      sendResponse({ ok: true });
     }
     return true;
   });
@@ -40,7 +45,6 @@
       e.preventDefault();
       e.stopPropagation();
       report("COPY_ATTEMPT");
-      console.log("[CopyGuard] Blocked copy");
     },
     true
   );
@@ -53,7 +57,6 @@
       e.preventDefault();
       e.stopPropagation();
       report("CUT_ATTEMPT");
-      console.log("[CopyGuard] Blocked cut");
     },
     true
   );
@@ -66,7 +69,6 @@
       e.preventDefault();
       e.stopPropagation();
       report("PASTE_ATTEMPT");
-      console.log("[CopyGuard] Blocked paste");
     },
     true
   );
@@ -82,17 +84,14 @@
         e.preventDefault();
         e.stopPropagation();
         report("COPY_ATTEMPT");
-        console.log("[CopyGuard] Blocked Ctrl+C");
       } else if (key === "v") {
         e.preventDefault();
         e.stopPropagation();
         report("PASTE_ATTEMPT");
-        console.log("[CopyGuard] Blocked Ctrl+V");
       } else if (key === "x") {
         e.preventDefault();
         e.stopPropagation();
         report("CUT_ATTEMPT");
-        console.log("[CopyGuard] Blocked Ctrl+X");
       }
     },
     true

@@ -8,20 +8,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Load saved state (default: enabled)
   chrome.storage.local.get("protection_enabled", (result) => {
-    const enabled = result.protection_enabled !== false; // default true
+    const enabled = result.protection_enabled !== false;
     toggle.checked = enabled;
     updateUI(enabled);
   });
 
-  // Toggle handler — save state + notify tabs + tell backend
+  // Toggle handler
   toggle.addEventListener("change", () => {
     const enabled = toggle.checked;
     chrome.storage.local.set({ protection_enabled: enabled });
     updateUI(enabled);
 
     // Tell every open tab to enable/disable protection
+    // Skip chrome:// and edge:// URLs which can't receive messages
     chrome.tabs.query({}, (tabs) => {
       for (const tab of tabs) {
+        if (!tab.url || tab.url.startsWith("chrome://") || tab.url.startsWith("edge://") || tab.url.startsWith("chrome-extension://")) {
+          continue;
+        }
         chrome.tabs
           .sendMessage(tab.id, { type: "toggle_protection", enabled })
           .catch(() => {});
